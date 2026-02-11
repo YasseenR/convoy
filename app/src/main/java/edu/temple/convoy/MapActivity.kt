@@ -1,4 +1,6 @@
 package edu.temple.convoy
 
-class MapActivity {
+import androidx.activity.ComponentActivity
+
+class MapActivity : ComponentActivity() {
 }
