@@ -127,6 +127,7 @@ fun LoginScreen(navController: NavController) {
                         Log.e("LOGIN", "Failed", e)
                     }
                 }
+                navController.navigate("map")
             }) {
                 Text("Login")
             }

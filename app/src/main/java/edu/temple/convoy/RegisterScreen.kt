@@ -28,6 +28,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,9 +44,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 
+
+val JSON = "application/json; charset=utf-8".toMediaType()
 @Composable
 fun RegisterScreen(navController: NavController) {
     val context = LocalContext.current
@@ -63,7 +70,11 @@ fun RegisterScreen(navController: NavController) {
         mutableStateOf("")
     }
     val state = remember { TextFieldState() }
+    LaunchedEffect(state.text) {
+        password = state.text as String
+    }
     var showPassword by remember { mutableStateOf(false)}
+    var loginResult by remember { mutableStateOf("") }
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
@@ -151,8 +162,11 @@ fun RegisterScreen(navController: NavController) {
             Button(onClick = {
                 scope.launch {
                     try {
-                        val result = register(username, firstName, lastName, password)
-                        Log.d("LOGIN", result)
+                        val response = register(username, firstName, lastName, password)
+                        if (response.status == "SUCCESS") {
+                            loginResult = "Logged in! Session: ${response.session_key}"
+                        }
+                        Log.d("LOGIN", response.message ?: "")
                     } catch (e: Exception) {
                         Log.e("LOGIN", "Failed", e)
                     }
@@ -169,15 +183,22 @@ fun RegisterScreen(navController: NavController) {
             }) {
                 Text("Login")
             }
+
+            Text(loginResult)
         }
 
 
     }
 }
 
-suspend fun register(username: String, firstName: String, lastName: String, password: String): String =
-    withContext(Dispatchers.IO) {
+suspend fun register(username: String, firstName: String, lastName: String, password: String): ApiResponse =
+    withContext(Dispatchers.IO){
         val client = OkHttpClient()
+
+        Log.d("U", username)
+        Log.d("F", firstName)
+        Log.d("L", lastName)
+        Log.d("P", password)
 
         val requestBody = FormBody.Builder()
             .add("action", "REGISTER")
@@ -193,9 +214,13 @@ suspend fun register(username: String, firstName: String, lastName: String, pass
             .build()
 
         client.newCall(request).execute().use { response ->
+
+            val responseBody = response.body?.string() ?: ""
+            Log.d("REGISTER", "Response body: $responseBody")
             if (!response.isSuccessful) {
-                throw Exception("Unexpected code $response")
+                throw Exception("Network Error: $responseBody")
             }
-            response.body?.string() ?: ""
+
+            Json.decodeFromString<ApiResponse>(responseBody)
         }
     }
