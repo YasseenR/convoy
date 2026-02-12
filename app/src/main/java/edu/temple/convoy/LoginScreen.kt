@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -37,12 +38,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import okhttp3.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 
 @Composable
 fun LoginScreen(navController: NavController) {
@@ -74,39 +78,19 @@ fun LoginScreen(navController: NavController) {
             modifier = Modifier.fillMaxWidth(0.75f)
         )
         Text("Password")
-        BasicSecureTextField(
-            state = state,
-            textObfuscationMode =
-                if (showPassword) {
-                    TextObfuscationMode.Visible
-                } else {
-                    TextObfuscationMode.RevealLastTyped
-                },
-            modifier = Modifier
-                .fillMaxWidth(0.75f)
-                .padding(6.dp)
-                .border(1.dp, Color.LightGray, RoundedCornerShape(6.dp))
-                .padding(6.dp),
-            decorator = { innerTextField ->
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.CenterStart)
-                            .padding(start = 16.dp, end = 48.dp)
-                    ) {
-                        innerTextField()
-                    }
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            modifier = Modifier.fillMaxWidth(0.75f),
+            visualTransformation =
+                if (showPassword) VisualTransformation.None
+                else PasswordVisualTransformation(),
+            trailingIcon = {
+                IconButton(onClick = { showPassword = !showPassword }) {
                     Icon(
-                        if (showPassword) {
-                            Icons.Filled.Visibility
-                        } else {
-                            Icons.Filled.VisibilityOff
-                        },
-                        "Toggle password visibility",
-                        Modifier
-                            .align(Alignment.CenterEnd)
-                            .requiredSize(48.dp).padding(16.dp)
-                            .clickable { showPassword = !showPassword}
+                        if (showPassword) Icons.Filled.Visibility
+                        else Icons.Filled.VisibilityOff,
+                        contentDescription = null
                     )
                 }
             }
@@ -122,7 +106,14 @@ fun LoginScreen(navController: NavController) {
                 scope.launch {
                     try {
                         val result = login(username, password)
-                        Log.d("LOGIN", result)
+                        Log.d("LOGIN", result.status)
+                        if (result.status == "SUCCESS" && result.session_key != null) {
+                            SessionDataStore.saveSession(
+                                context = context,
+                                username = username,
+                                sessionKey = result.session_key
+                            )
+                        }
                     } catch (e: Exception) {
                         Log.e("LOGIN", "Failed", e)
                     }
@@ -144,7 +135,7 @@ fun LoginScreen(navController: NavController) {
     }
 }
 
-suspend fun login(username: String, password: String): String =
+suspend fun login(username: String, password: String): ApiResponse =
     withContext(Dispatchers.IO) {
         val client = OkHttpClient()
 
@@ -160,9 +151,13 @@ suspend fun login(username: String, password: String): String =
             .build()
 
         client.newCall(request).execute().use { response ->
+
+            val responseBody = response.body?.string() ?: ""
+            Log.d("LOGIN", "Response body: $responseBody")
             if (!response.isSuccessful) {
-                throw Exception("Unexpected code $response")
+                throw Exception("Network Error: $responseBody")
             }
-            response.body?.string() ?: ""
+
+            Json.decodeFromString<ApiResponse>(responseBody)
         }
     }

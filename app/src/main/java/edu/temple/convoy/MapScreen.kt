@@ -19,8 +19,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.android.gms.maps.model.CameraPosition
@@ -35,6 +38,10 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun MapScreen(navController: NavController, userLocation: LatLng?) {
+    val context = LocalContext.current
+    val sessionKey by SessionDataStore
+        .sessionKeyFlow(context)
+        .collectAsState(initial = null)
     if (userLocation == null) {
         Text("Getting Location...")
         return
@@ -56,7 +63,7 @@ fun MapScreen(navController: NavController, userLocation: LatLng?) {
                 .align(Alignment.BottomStart)
                 .padding(16.dp)
         ) {
-            Text("Join a convoy")
+            Text("Join a convoy $sessionKey")
         }
 
         FloatingActionButton(
