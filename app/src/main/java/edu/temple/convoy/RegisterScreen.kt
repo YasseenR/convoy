@@ -1,5 +1,6 @@
 package edu.temple.convoy
 
+import android.util.Log
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,16 +31,32 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.FormBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 @Composable
 fun RegisterScreen(navController: NavController) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var username by remember {
+        mutableStateOf("")
+    }
+    var firstName by remember {
+        mutableStateOf("")
+    }
+    var lastName by remember {
         mutableStateOf("")
     }
     var password by remember {
@@ -70,18 +87,18 @@ fun RegisterScreen(navController: NavController) {
 
         Text("First Name")
         OutlinedTextField(
-            value = username,
+            value = firstName,
             onValueChange = { text ->
-                username = text
+                firstName = text
             },
             modifier = Modifier.fillMaxWidth(0.75f)
         )
 
         Text("Last Name")
         OutlinedTextField(
-            value = username,
+            value = lastName,
             onValueChange = { text ->
-                username = text
+                lastName = text
             },
             modifier = Modifier.fillMaxWidth(0.75f)
         )
@@ -132,21 +149,53 @@ fun RegisterScreen(navController: NavController) {
 
         ) {
             Button(onClick = {
-
+                scope.launch {
+                    try {
+                        val result = register(username, firstName, lastName, password)
+                        Log.d("LOGIN", result)
+                    } catch (e: Exception) {
+                        Log.e("LOGIN", "Failed", e)
+                    }
+                }
             }) {
-                Text("Login")
+                Text("Register")
             }
 
             Spacer(modifier = Modifier
                 .width(12.dp))
 
             OutlinedButton(onClick = {
-
+                navController.popBackStack()
             }) {
-                Text("Register")
+                Text("Login")
             }
         }
 
 
     }
 }
+
+suspend fun register(username: String, firstName: String, lastName: String, password: String): String =
+    withContext(Dispatchers.IO) {
+        val client = OkHttpClient()
+
+        val requestBody = FormBody.Builder()
+            .add("action", "REGISTER")
+            .add("username", username)
+            .add("firstname", firstName)
+            .add("lastname", lastName)
+            .add("password", password)
+            .build()
+
+        val request = Request.Builder()
+            .url("https://kamorris.com/lab/convoy/account.php")
+            .post(requestBody)
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw Exception("Unexpected code $response")
+            }
+            response.body?.string() ?: ""
+        }
+    }
