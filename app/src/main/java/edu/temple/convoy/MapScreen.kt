@@ -34,7 +34,13 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.maps.android.compose.rememberMarkerState
 import com.google.maps.android.compose.rememberUpdatedMarkerState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import okhttp3.FormBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 @Composable
 fun MapScreen(navController: NavController, userLocation: LatLng?) {
@@ -86,3 +92,100 @@ fun MapScreen(navController: NavController, userLocation: LatLng?) {
     }
 
 }
+
+suspend fun joinConvoy(username: String, firstName: String, lastName: String, password: String): ApiResponse =
+    withContext(Dispatchers.IO){
+        val client = OkHttpClient()
+
+        Log.d("U", username)
+        Log.d("F", firstName)
+        Log.d("L", lastName)
+        Log.d("P", password)
+
+        val requestBody = FormBody.Builder()
+            .add("action", "REGISTER")
+            .add("username", username)
+            .add("firstname", firstName)
+            .add("lastname", lastName)
+            .add("password", password)
+            .build()
+
+        val request = Request.Builder()
+            .url("https://kamorris.com/lab/convoy/account.php")
+            .post(requestBody)
+            .build()
+
+        client.newCall(request).execute().use { response ->
+
+            val responseBody = response.body?.string() ?: ""
+            Log.d("REGISTER", "Response body: $responseBody")
+            if (!response.isSuccessful) {
+                throw Exception("Network Error: $responseBody")
+            }
+
+            Json.decodeFromString<ApiResponse>(responseBody)
+        }
+    }
+
+suspend fun createConvoy(username: String, sessionKey: String): ApiResponse =
+    withContext(Dispatchers.IO){
+        val client = OkHttpClient()
+
+        Log.d("U", username)
+
+        val requestBody = FormBody.Builder()
+            .add("action", "REGISTER")
+            .add("username", username)
+            .add("session_key", sessionKey)
+            .build()
+
+        val request = Request.Builder()
+            .url("https://kamorris.com/lab/convoy/account.php")
+            .post(requestBody)
+            .build()
+
+        client.newCall(request).execute().use { response ->
+
+            val responseBody = response.body?.string() ?: ""
+            Log.d("REGISTER", "Response body: $responseBody")
+            if (!response.isSuccessful) {
+                throw Exception("Network Error: $responseBody")
+            }
+
+            Json.decodeFromString<ApiResponse>(responseBody)
+        }
+    }
+
+suspend fun leaveConvoy(username: String, firstName: String, lastName: String, password: String): ApiResponse =
+    withContext(Dispatchers.IO){
+        val client = OkHttpClient()
+
+        Log.d("U", username)
+        Log.d("F", firstName)
+        Log.d("L", lastName)
+        Log.d("P", password)
+
+        val requestBody = FormBody.Builder()
+            .add("action", "REGISTER")
+            .add("username", username)
+            .add("firstname", firstName)
+            .add("lastname", lastName)
+            .add("password", password)
+            .build()
+
+        val request = Request.Builder()
+            .url("https://kamorris.com/lab/convoy/account.php")
+            .post(requestBody)
+            .build()
+
+        client.newCall(request).execute().use { response ->
+
+            val responseBody = response.body?.string() ?: ""
+            Log.d("REGISTER", "Response body: $responseBody")
+            if (!response.isSuccessful) {
+                throw Exception("Network Error: $responseBody")
+            }
+
+            Json.decodeFromString<ApiResponse>(responseBody)
+        }
+    }
