@@ -69,7 +69,7 @@ fun MapScreen(navController: NavController, userLocation: LatLng?) {
                 .align(Alignment.BottomStart)
                 .padding(16.dp)
         ) {
-            Text("Join a convoy $sessionKey")
+            Text("Start a convoy")
         }
 
         FloatingActionButton(
